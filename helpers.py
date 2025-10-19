@@ -1,17 +1,50 @@
-import matplotlib.pyplot as plt
 import os
-from PIL import Image
-from pathlib import Path
 import random
 import torch
+from PIL import Image
+from pathlib import Path
 from collections import Counter
-import pandas as pd
 from tqdm.notebook import tqdm
+import matplotlib.pyplot as plt
+import plotly.express as px
+import pandas as pd
 import torchvision.transforms as T
 
-# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+model = torch.load('binary_facemask_model.pth', map_location=device, weights_only=False)
+IMAGE_SIZE = 224
+data_dir = Path('Face Mask Dataset')
+train_dir = data_dir/'Train'
+validation_dir = data_dir/'Validation'
+test_dir = data_dir/'Test'
+class_names = ['WithMask', 'WithoutMask']
+class_names_dict = {'WithMask': 0, 'WithoutMask': 1}
+random_class = random.choice(class_names)
+random_img_path = random.choice(list((train_dir/random_class).iterdir()))
 
-def plot_random_images(train_dir, classes, nrows, ncols):  
+train_transforms = T.Compose([
+    T.RandomResizedCrop(IMAGE_SIZE, scale=(0.7, 1.0), ratio=(0.9, 1.1)),  
+    T.RandomHorizontalFlip(p=0.5),
+    # T.RandomApply([T.ColorJitter(brightness=0.25, contrast=0.25, saturation=0.15, hue=0.02)], p=0.6),
+    # T.RandomRotation(degrees=10), 
+    T.RandomApply([T.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0))], p=0.25),
+    T.ToTensor(),
+    T.Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225]),
+])
+
+
+
+def plot_dir_contents(dirname):
+    dir_dict = {}
+    for dir in list(dirname.iterdir()):
+        no_files_in_dir = len(list((dirname/dir.stem).iterdir()))
+        dir_dict[dir.stem] = no_files_in_dir
+    dir_dict_df = pd.Series(dir_dict)
+    fig = px.bar(dir_dict_df, orientation='h')
+    fig.show()
+
+
+def plot_random_images(train_dir, classes=class_names, nrows=3, ncols=3):  
         """
         Plot random images from the dataset
         """
@@ -167,7 +200,7 @@ def make_prediction(model, dataset):
     ax.axis('off')
 
 
-def run_prediction(img_path, model):
+def run_prediction(img_path=random_img_path, model=model):
         user_img = train_transforms(Image.open(img_path).convert('RGB'))
         pred = torch.argmax(model(user_img.unsqueeze(0))).item()
         prediction = class_names[pred]
@@ -177,5 +210,5 @@ def run_prediction(img_path, model):
         ax.axis('off')
         ax.set_title(f'Predicted: {prediction}')
         fig.show()
-        return prediction, class_names_dict[prediction];
+        return prediction, class_names_dict[prediction]
 

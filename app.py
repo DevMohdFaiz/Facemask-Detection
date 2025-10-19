@@ -1,17 +1,32 @@
-from flask import Flask, render_template, request
+import torch
+import importlib
+import helpers
+importlib.reload(helpers)
+from flask import Flask, render_template, request, redirect
 from pathlib import Path
-
-uploads_folder = 'static/uploads'
-Path(uploads_folder).mkdir(exist_ok=True, parents=True)
+from helpers import run_prediction
 
 app = Flask(__name__)
+uploads_folder = 'static/uploads'
+Path(uploads_folder).mkdir(exist_ok=True, parents=True)
 app.config['UPLOAD_FOLDER'] = uploads_folder
-# req_f = request.files['file']
-app_conf = app.config
-@app.route('/')
-def send_req():
-    names = 'Faiz'
-    return render_template('index.html', name=names, app_conf=app_conf)
+
+@app.route('/', methods= ['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            return redirect(request.url)
+        
+        file = request.files['file']
+        if file.filename == '':
+            return redirect(request.url)
+        
+        if file:
+            filepath = Path(app.config['UPLOAD_FOLDER'], file.filename)
+            file.save(filepath)
+            predicted_class, predicted_idx = run_prediction(img_path=filepath)
+            return render_template('index.html', filepath=filepath, predicted_class=predicted_class, predicted_idx=predicted_idx, satus="Success")
+    return render_template('index.html', prediction=None, uploaded_image=None, status='Fail')
 
 
 if __name__ == '__main__': 
