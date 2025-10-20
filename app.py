@@ -25,8 +25,8 @@ def index():
             filepath = Path(app.config['UPLOAD_FOLDER'], file.filename)
             file.save(filepath)
             predicted_class, predicted_idx = run_prediction(img_path=filepath)
-            return render_template('index.html', filepath=filepath, predicted_class=predicted_class, predicted_idx=predicted_idx, satus="Success")
-    return render_template('index.html', prediction=None, uploaded_image=None, status='Fail')
+            return render_template('index.html', filepath=filepath, predicted_class=predicted_class, predicted_idx=predicted_idx)
+    return render_template('index.html', prediction=None, filepath=None, predicted_class=predicted_class, predicted_idx=predicted_idx)
 
 
 if __name__ == '__main__': 
